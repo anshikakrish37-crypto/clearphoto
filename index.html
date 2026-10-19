@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clear Photo</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f766e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Clear Photo">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f3f5f2;--surface:#fff;--ink:#17211b;--muted:#5d6b62;--line:#d5ddd6;--accent:#0f766e;--accent-ink:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101613;--surface:#18211c;--ink:#e8efe9;--muted:#9aa89f;--line:#2b3a31;--accent:#3dc2b3;--accent-ink:#06211d}}
+:root[data-theme="dark"]{--bg:#101613;--surface:#18211c;--ink:#e8efe9;--muted:#9aa89f;--line:#2b3a31;--accent:#3dc2b3;--accent-ink:#06211d}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Trebuchet MS","Segoe UI",system-ui,sans-serif}
+main{max-width:720px;margin:0 auto;padding:20px 16px 40px}
+h1{font:700 2rem/1.1 Georgia,"Times New Roman",serif;margin:8px 0 6px;letter-spacing:-.01em}
+p.sub{margin:0 0 20px;color:var(--muted)}
+.drop{display:block;border:2px dashed var(--line);border-radius:14px;padding:28px 16px;text-align:center;background:var(--surface);cursor:pointer}
+.drop:focus-within,.drop:hover{border-color:var(--accent)}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.drop b{display:block;font-size:1.1rem}
+.drop span{color:var(--muted);font-size:.9rem}
+.panel{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.row{display:flex;align-items:center;gap:12px;margin:10px 0;flex-wrap:wrap}
+.row label{flex:0 0 110px;font-size:.92rem}
+.row input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
+.row output{width:38px;text-align:right;color:var(--muted);font-size:.9rem}
+.seg{display:flex;gap:8px;flex:1}
+.seg button{flex:1}
+button{font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:10px 14px;border-radius:10px;cursor:pointer}
+button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.go{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700;width:100%;margin-top:8px}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#status{margin:10px 0 0;color:var(--muted);font-size:.9rem;min-height:1.4em}
+#result{display:none;margin-top:16px}
+.cmp{position:relative;border-radius:12px;overflow:hidden;background:#000;line-height:0;touch-action:pan-y}
+.cmp img{width:100%;display:block}
+.cmp .before{position:absolute;inset:0;clip-path:inset(0 50% 0 0)}
+.cmp .tag{position:absolute;top:8px;padding:3px 8px;border-radius:6px;background:rgba(0,0,0,.65);color:#fff;font-size:.8rem;line-height:1.3}
+.cmp .tag.l{left:8px}.cmp .tag.r{right:8px}
+#slider{width:100%;margin:10px 0 0;accent-color:var(--accent)}
+.info{color:var(--muted);font-size:.9rem;margin:8px 0}
+.note{margin-top:24px;padding:14px;border-left:4px solid var(--accent);background:var(--surface);border-radius:0 10px 10px 0;font-size:.9rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+<h1>Clear Photo</h1>
+<p class="sub">Dhundhli photo ko bada karo, saaf karo aur HD ya 4K me download karo. Photo aapke phone se bahar nahi jaati.</p>
+
+<label class="drop">
+<input type="file" id="file" accept="image/*">
+<b>Photo chunein</b>
+<span>JPG, PNG ya WebP</span>
+</label>
+
+<section class="panel" id="controls" hidden>
+<div class="row"><label>Size</label>
+<div class="seg" id="seg">
+<button type="button" data-s="2" aria-pressed="false">2x</button>
+<button type="button" data-s="4" aria-pressed="true">4x</button>
+<button type="button" data-s="hd" aria-pressed="false">Full HD</button>
+<button type="button" data-s="4k" aria-pressed="false">4K</button>
+</div></div>
+<div class="row"><label for="sh">Saafai</label><input type="range" id="sh" min="0" max="100" value="60"><output id="shO">60</output></div>
+<div class="row"><label for="dn">Noise kam</label><input type="range" id="dn" min="0" max="100" value="30"><output id="dnO">30</output></div>
+<div class="row"><label for="ct">Contrast</label><input type="range" id="ct" min="0" max="50" value="10"><output id="ctO">10</output></div>
+<button class="go" id="go" type="button">Saaf karo</button>
+<p id="status" role="status"></p>
+</section>
+
+<section id="result">
+<div class="cmp" id="cmp">
+<img id="afterImg" alt="Saaf ki hui photo">
+<div class="before"><img id="beforeImg" alt="Original photo"></div>
+<span class="tag l">Pehle</span><span class="tag r">Baad me</span>
+</div>
+<input type="range" id="slider" min="0" max="100" value="50" aria-label="Pehle aur baad ki tulna">
+<p class="info" id="info"></p>
+<button class="go" id="dl" type="button">Download karo</button>
+</section>
+
+<p class="note">Ye app smart upscaling, noise kam karna aur sharpening se photo ko behtar banata hai. Remini jaisa AI chehra bana nahi sakta, isliye bahut zyada dhundhli photo me nayi detail nahi aayegi. Abhi sirf photo chalti hai, video nahi.</p>
+</main>
+
+<script>
+(function(){
+var MAXSIDE=4096, srcImg=null, scaleMode='4', outURL=null, outName='clear-photo.png';
+var $=function(i){return document.getElementById(i)};
+
+['sh','dn','ct'].forEach(function(id){
+  $(id).addEventListener('input',function(){$(id+'O').textContent=$(id).value});
+});
+$('seg').addEventListener('click',function(e){
+  var b=e.target.closest('button'); if(!b) return;
+  scaleMode=b.dataset.s;
+  [].forEach.call($('seg').children,function(x){x.setAttribute('aria-pressed',x===b)});
+});
+
+$('file').addEventListener('change',function(){
+  var f=this.files[0]; if(!f) return;
+  outName=f.name.replace(/\.[^.]+$/,'')+'-clear.png';
+  var url=URL.createObjectURL(f), im=new Image();
+  im.onload=function(){srcImg=im;$('controls').hidden=false;$('result').style.display='none';
+    $('status').textContent='Photo ka size: '+im.naturalWidth+' x '+im.naturalHeight;};
+  im.onerror=function(){$('status').textContent='Ye photo khul nahi saki. Dusri file try karo.';$('controls').hidden=false};
+  im.src=url;
+});
+
+function pickScale(w,h){
+  var long=Math.max(w,h), s;
+  if(scaleMode==='hd') s=1920/long;
+  else if(scaleMode==='4k') s=3840/long;
+  else s=+scaleMode;
+  if(long*s>MAXSIDE) s=MAXSIDE/long;
+  return Math.max(s,1);
+}
+
+function blur(src,w,h,r){
+  var n=2*r+1, tmp=new Uint8ClampedArray(src.length), out=new Uint8ClampedArray(src.length), x,y,c,i,sum,idx;
+  for(y=0;y<h;y++){
+    for(c=0;c<3;c++){
+      sum=0;
+      for(i=-r;i<=r;i++){sum+=src[(y*w+Math.min(w-1,Math.max(0,i)))*4+c]}
+      for(x=0;x<w;x++){
+        tmp[(y*w+x)*4+c]=sum/n;
+        sum+=src[(y*w+Math.min(w-1,x+r+1))*4+c]-src[(y*w+Math.max(0,x-r))*4+c];
+      }
+    }
+  }
+  for(x=0;x<w;x++){
+    for(c=0;c<3;c++){
+      sum=0;
+      for(i=-r;i<=r;i++){sum+=tmp[(Math.min(h-1,Math.max(0,i))*w+x)*4+c]}
+      for(y=0;y<h;y++){
+        out[(y*w+x)*4+c]=sum/n;
+        sum+=tmp[(Math.min(h-1,y+r+1)*w+x)*4+c]-tmp[(Math.max(0,y-r)*w+x)*4+c];
+      }
+    }
+  }
+  for(idx=3;idx<out.length;idx+=4) out[idx]=255;
+  return out;
+}
+
+function tick(){return new Promise(function(r){setTimeout(r,30)})}
+
+function stepUp(canvas,tw,th){
+  var cur=canvas;
+  while(cur.width<tw||cur.height<th){
+    var nw=Math.min(tw,Math.round(cur.width*2)), nh=Math.min(th,Math.round(cur.height*2));
+    var c=document.createElement('canvas'); c.width=nw; c.height=nh;
+    var g=c.getContext('2d'); g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+    g.drawImage(cur,0,0,nw,nh); cur=c;
+  }
+  return cur;
+}
+
+$('go').addEventListener('click',async function(){
+  if(!srcImg) return;
+  var btn=this; btn.disabled=true;
+  try{
+    var sw=srcImg.naturalWidth, sh=srcImg.naturalHeight, s=pickScale(sw,sh);
+    var tw=Math.round(sw*s), th=Math.round(sh*s);
+    var dn=+$('dn').value/100, sharp=+$('sh').value/100, ct=+$('ct').value/100;
+
+    $('status').textContent='Noise kam ho raha hai...'; await tick();
+    var base=document.createElement('canvas'); base.width=sw; base.height=sh;
+    var bg=base.getContext('2d'); bg.drawImage(srcImg,0,0);
+    if(dn>0){
+      var d0=bg.getImageData(0,0,sw,sh), bl=blur(d0.data,sw,sh,1), a=dn*0.7, p;
+      for(p=0;p<d0.data.length;p+=4){
+        d0.data[p]+=(bl[p]-d0.data[p])*a; d0.data[p+1]+=(bl[p+1]-d0.data[p+1])*a; d0.data[p+2]+=(bl[p+2]-d0.data[p+2])*a;
+      }
+      bg.putImageData(d0,0,0);
+    }
+
+    $('status').textContent='Photo bada ho rahi hai...'; await tick();
+    var big=stepUp(base,tw,th);
+    var ctx=big.getContext('2d');
+
+    $('status').textContent='Saafai badh rahi hai...'; await tick();
+    var img=ctx.getImageData(0,0,tw,th), d=img.data;
+    var r=Math.max(1,Math.round(s*0.7)), b2=blur(d,tw,th,r), amt=sharp*2.2, k;
+    var cf=1+ct, v;
+    for(k=0;k<d.length;k+=4){
+      for(var c=0;c<3;c++){
+        v=d[k+c]+amt*(d[k+c]-b2[k+c]);
+        v=(v-128)*cf+128;
+        d[k+c]=v;
+      }
+    }
+    ctx.putImageData(img,0,0);
+
+    $('status').textContent='Photo taiyar kar rahe hain...'; await tick();
+    var blob=await new Promise(function(res){big.toBlob(res,'image/png')});
+    if(outURL) URL.revokeObjectURL(outURL);
+    outURL=URL.createObjectURL(blob); outBlob=blob;
+    $('afterImg').src=outURL;
+    $('beforeImg').src=srcImg.src;
+    $('info').textContent='Pehle: '+sw+' x '+sh+'. Ab: '+tw+' x '+th+' ('+(blob.size/1048576).toFixed(1)+' MB).';
+    $('result').style.display='block';
+    $('status').textContent='Ho gaya.';
+    $('result').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){
+    $('status').textContent='Photo bahut badi hai ya phone me memory kam hai. Chhota size chunkar dobara try karo.';
+  }
+  btn.disabled=false;
+});
+
+$('slider').addEventListener('input',function(){
+  document.querySelector('.cmp .before').style.clipPath='inset(0 '+(100-this.value)+'% 0 0)';
+});
+
+var outBlob=null;
+$('dl').addEventListener('click',async function(){
+  if(!outBlob) return;
+  try{
+    var dl=window.claude&&await window.claude.use('downloads');
+    if(dl){await dl.save({filename:outName,data:outBlob});return;}
+  }catch(e){if(e&&e.code==='declined')return;}
+  var a=document.createElement('a'); a.href=outURL; a.download=outName;
+  document.body.appendChild(a); a.click(); a.remove();
+});
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
+</script>
+</body>
+</html>
